@@ -3,8 +3,6 @@
 SCRIPT_DIR=$(dirname "$(realpath "$0")")
 DB_ROOT="$SCRIPT_DIR/DBMS"
 
-# Load modules
-source "$SCRIPT_DIR/validations/common_validations.sh"
 
 # Create DB root directory if not exists
 mkdir -p "$DB_ROOT"
