@@ -55,3 +55,18 @@ drop_db() {
 
     read -p "Press Enter to continue..."
 }
+
+connect_db(){
+    read -p "Enter database name to connect: " db_name
+    if [ ! -d "$DB_ROOT/$db_name" ]; then
+        echo "Database does not exist !!!!"
+        read -p "Press Enter to continue..."
+        return
+    fi
+
+    CURRENT_DB="$db_name"
+    echo "Connected to database '$CURRENT_DB' ✅"
+    read -p "Press Enter to continue..."
+
+    table_menu
+}

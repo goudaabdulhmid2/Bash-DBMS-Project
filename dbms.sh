@@ -2,8 +2,12 @@
 
 SCRIPT_DIR=$(dirname "$(realpath "$0")")
 
-# Load DB operations
+# Global state
+CURRENT_DB=""
+
+# Load modules
 source "$SCRIPT_DIR/db_operations.sh"
+source "$SCRIPT_DIR/table_operations.sh"
 
 clear
 echo "==========================================="
@@ -24,8 +28,7 @@ do
             clear
             ;;
         "Connect To Database")
-            echo ">> Connect To Database (Step 3)"
-            read -p "Press Enter to continue..."
+            connect_db        
             clear
             ;;
         "Drop Database")
