@@ -2,11 +2,7 @@
 
 create_table(){
 
-    if [ -z "$CURRENT_DB" ]; then
-        echo "No database selected !!!"
-        read -p "Press Enter to continue..."
-        return
-    fi
+    ensure_db_selected || return
 
     # Table name
     while true; do
@@ -109,4 +105,26 @@ for ((i=1; i<=col_count; i++)); do
     read -p "Press Enter to continue..."
 
 
+}
+
+list_tables() {
+
+   
+    ensure_db_selected || return
+
+    db_path="$DB_ROOT/$CURRENT_DB"
+
+    echo "Tables in database '$CURRENT_DB':"
+
+    table_files=$(find "$db_path" -maxdepth 1 -type f -name "*.table")
+
+    if [ -z "$table_files" ]; then
+        echo "No tables found."
+    else
+        while read -r table; do
+            basename "$table" .table
+        done <<< "$table_files"
+    fi
+
+    read -p "Press Enter to continue..."
 }

@@ -6,7 +6,8 @@ SCRIPT_DIR=$(dirname "$(realpath "$0")")
 CURRENT_DB=""
 
 # Load modules
-source "$SCRIPT_DIR/validations/common_validations.sh"
+source "$SCRIPT_DIR/utilities/validations/common_validations.sh"
+source "$SCRIPT_DIR/utilities/db_context.sh"
 source "$SCRIPT_DIR/db_operations.sh"
 source "$SCRIPT_DIR/table_operations.sh"
 source "$SCRIPT_DIR/table_menu.sh"

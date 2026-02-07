@@ -23,7 +23,8 @@ table_menu() {
                clear
                 ;;
             "List Tables")
-                echo ">> List Tables "
+                list_tables
+                clear
                 ;;
             "Drop Table")
                 echo ">> Drop Table "
