@@ -3,13 +3,16 @@
 SCRIPT_DIR=$(dirname "$(realpath "$0")")
 DB_ROOT="$SCRIPT_DIR/DBMS"
 
+# Load modules
+source "$SCRIPT_DIR/validations/common_validations.sh"
+
 # Create DB root directory if not exists
 mkdir -p "$DB_ROOT"
 
 create_db() {
     read -p "Enter database name: " db_name
 
-    if [[ ! $db_name =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]]; then
+    if ! is_valid_name "$db_name"; then
         echo "Invalid database name !!!!!"
         read -p "Press Enter to continue..."
         return
@@ -45,8 +48,7 @@ drop_db() {
         return
     fi
 
-    read -p "Are you sure you want to delete '$db_name'? (y/n): " confirm
-    if [[ $confirm == "y" ]]; then
+    if confirm_action "Are you sure you want to delete '$db_name'?";  then
         rm -r "$DB_ROOT/$db_name"
         echo "Database '$db_name' deleted successfully ✅"
     else
