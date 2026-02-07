@@ -1,83 +1,98 @@
 #!/bin/bash
 
-# Configuration
-DB_DIR="./databases"
+SCRIPT_DIR=$(dirname "$(realpath "$0")")
+DB_ROOT="$SCRIPT_DIR/DBMS"
 
-# Create databases directory if it doesn't exist
-mkdir -p "$DB_DIR"
 
-clear
-echo "================================="
-echo "Welcome to Bash DBMS"
-echo "================================="
+# Create root diretory if not exists
+if [ ! -d "$DB_ROOT" ]
+    then
+        mkdir -p "$DB_ROOT"
 
-function main_menu {
-    echo "1. Create Database"
-    echo "2. List Databases"
-    echo "3. Connect to Database"
-    echo "4. Drop Database"
-    echo "5. Exit"
-    read -p "Enter choice: " choice
+fi
 
-    case $choice in
-        1) create_db ;;
-        2) list_dbs ;;
-        3) connect_db ;;
-        4) drop_db ;;
-        5) exit 0 ;;
-        *) echo "Invalid choice" ;;
-    esac
-}
+create_db(){
+    read -p "Enter database name: " db_name
 
-function create_db {
-    read -p "Enter database name: " dbname
-    # Validate input (basic check against empty string and special chars)
-    if [[ -z "$dbname" || "$dbname" =~ [^a-zA-Z0-9_] ]]; then
-        echo "Invalid database name. Use alphanumeric characters and underscores only."
+    if [[ ! $db_name =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]]; then
+        echo "Invalid database name !!!!!"
+        read -p "Press Enter to continue..."
         return
     fi
 
-    if [ -d "$DB_DIR/$dbname" ]; then
-        echo "Database already exists!"
+    if [ -d "$DB_ROOT/$db_name" ]; then
+        echo "Database already exists !!!!!"
     else
-        mkdir "$DB_DIR/$dbname"
-        echo "Database '$dbname' created successfully."
+        mkdir "$DB_ROOT/$db_name"
+        echo "Database '$db_name' created successfully ✅"
     fi
+
+    read -p "Press Enter to continue..."
 }
 
-function list_dbs {
-    echo "Databases:"
-    if [ -z "$(ls -A "$DB_DIR")" ]; then
+list_dbs(){
+    echo "Available Databases:"
+    if [ "$(ls -A $DB_ROOT)" ]; then
+        ls "$DB_ROOT"
+    else
         echo "No databases found."
-    else
-        ls -1 "$DB_DIR"
     fi
+
+    read -p "Press Enter to continue..."
+
 }
 
-function connect_db {
-    read -p "Enter database name to connect: " dbname
-    if [ -d "$DB_DIR/$dbname" ]; then
-        echo "Connected to '$dbname'."
-        # TODO: Implement table operations menu here
-        # For now, just listing tables in that DB
-        ls "$DB_DIR/$dbname"
-    else
-        echo "Database not found!"
+drop_db(){
+    read -p "Enter database name to drop: " db_name
+
+    if [ ! -d "$DB_ROOT/$db_name" ]; then
+        echo "Database does not exist !!!!"
+        read -p "Press Enter to continue..."
+        return
     fi
+
+    read -p "Are you sure you want to delete '$db_name'? (y/n): " confirm
+    if [[ $confirm == "y" ]]; then
+        rm -r "$DB_ROOT/$db_name"
+        echo "Database '$db_name' deleted successfully ✅"
+    else
+        echo "Operation cancelled."
+    fi
+
+    read -p "Press Enter to continue..."
 }
 
-function drop_db {
-    read -p "Enter database name to drop: " dbname
-    if [ -d "$DB_DIR/$dbname" ]; then
-        rm -r "$DB_DIR/$dbname"
-        echo "Database '$dbname' dropped successfully."
-    else
-        echo "Database not found!"
-    fi
-}
 
-# Main loop
-while true; do
-    main_menu
-    echo "" # Empty line for readability
+
+clear 
+echo " ==========================================="
+echo " Bash DBMS Main Menu"
+echo " ==========================================="
+
+PS3="Choose an option: "
+
+select choice in  "Create Database" "List Databases" "Connect To Database" "Drop Database" "Exit"
+do 
+    case $choice in
+        "Create Database")
+            create_db
+            ;;
+        "List Databases")
+            list_dbs
+            ;;
+        "Connect To Database")
+            echo ">> Connect To Database selected"
+            ;;
+        "Drop Database")
+            drop_db
+            ;;
+        "Exit")
+            echo "Goodbye 👋"
+            break
+            ;;
+        *)
+            echo "Invalid option, try again"
+            ;;
+    esac
 done
+
