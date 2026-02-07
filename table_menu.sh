@@ -30,7 +30,8 @@ table_menu() {
                 echo ">> Drop Table "
                 ;;
             "Insert Into Table")
-                echo ">> Insert Into Table "
+                insert_into_table
+                clear
                 ;;
             "Select From Table")
                 echo ">> Select From Table "

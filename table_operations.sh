@@ -128,3 +128,101 @@ list_tables() {
 
     read -p "Press Enter to continue..."
 }
+
+insert_into_table() {
+
+    ensure_db_selected || return
+
+    read -p "Enter table name: " table_name
+    table_file="$DB_ROOT/$CURRENT_DB/$table_name.table"
+
+    if [ ! -f "$table_file" ]; then
+        echo "Table does not exist !!!"
+        read -p "Press Enter to continue..."
+        return
+    fi
+
+    #  Read metadata 
+    meta=$(head -n 1 "$table_file")
+    IFS='|' read -ra cols <<< "$meta"
+
+    col_names=()
+    col_types=()
+    pk_index=-1
+
+    for i in "${!cols[@]}"; do
+        col=$(echo "${cols[$i]}" | xargs)
+        IFS=':' read -ra parts <<< "$col"
+
+        name="${parts[0]}"
+        type="${parts[1]}"
+        flag=$(echo "${parts[2]}" | xargs)
+
+        col_names+=("$name")
+        col_types+=("$type")
+
+        if [ "$flag" = "PK" ]; then
+            pk_index=$i
+        fi
+    done
+
+    if [ "$pk_index" -lt 0 ]; then
+        echo "Invalid table schema (no PK) !!!"
+        read -p "Press Enter to continue..."
+        return
+    fi
+
+    #  Step 4: Read PK FIRST 
+    read -p "Enter ${col_names[$pk_index]} (PK): " pk_value
+    pk_value=$(echo "$pk_value" | xargs)
+
+    if ! is_valid_int "$pk_value"; then
+        echo "Primary key must be integer !!!"
+        read -p "Press Enter to continue..."
+        return
+    fi
+
+    if ! is_pk_unique "$table_file" "$pk_index" "$pk_value"; then
+        echo "Primary key already exists !!!"
+        read -p "Press Enter to continue..."
+        return
+    fi
+
+    #  Step 5: Read remaining columns 
+    values=()
+
+    for i in "${!col_names[@]}"; do
+        if [ "$i" -eq "$pk_index" ]; then
+            values+=("$pk_value")
+            continue
+        fi
+
+        while true; do
+            read -p "Enter ${col_names[$i]} (${col_types[$i]}): " val
+            val=$(echo "$val" | xargs)
+
+            if [ "${col_types[$i]}" = "int" ]; then
+                if is_valid_int "$val"; then
+                    break
+                else
+                    echo "Invalid integer !!!"
+                fi
+            else
+                if is_non_empty_string "$val"; then
+                    break
+                else
+                    echo "Value cannot be empty !!!"
+                fi
+            fi
+        done
+
+        values+=("$val")
+    done
+
+    #  Step 6: Insert row 
+    row=$(IFS='|'; echo "${values[*]}")
+    echo "$row" >> "$table_file"
+
+    echo "Row inserted successfully ✅"
+    read -p "Press Enter to continue..."
+}

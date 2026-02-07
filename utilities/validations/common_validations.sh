@@ -22,3 +22,36 @@ confirm_action() {
     read -p "$message (y/n): " answer
     [[ $answer =~ ^[yY]$ ]]
 }
+
+is_valid_int() {
+    [[ $1 =~ ^-?[0-9]+$ ]]
+}
+
+is_non_empty_string() {
+    local trimmed
+    trimmed=$(echo "$1" | xargs)
+    [ -n "$trimmed" ]
+}
+
+is_pk_unique() {
+    local table_file="$1"
+    local pk_index="$2"
+    local pk_value="$3"
+
+    awk -F'|' -v idx=$((pk_index+1)) -v pk="$pk_value" '
+        BEGIN { found = 0 }
+
+        NR > 1 {
+            gsub(/^[ \t]+|[ \t]+$/, "", $idx)
+            if ($idx == pk) {
+                found = 1
+                exit
+            }
+        }
+
+        END {
+            if (found) exit 1
+            else exit 0
+        }
+    ' "$table_file"
+}
