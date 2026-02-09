@@ -349,3 +349,113 @@ delete_from_table() {
     echo "Record deleted successfully ✅"
     read -p "Press Enter to continue..."
 }
+
+
+update_table() {
+
+    ensure_db_selected || return
+
+    read -p "Enter table name: " table_name
+    table_name=$(trim "$table_name")
+    table_file="$DB_ROOT/$CURRENT_DB/$table_name.table"
+
+    if [ ! -f "$table_file" ]; then
+        echo "Table does not exist."
+        read -p "Press Enter to continue..."
+        return
+    fi
+
+    # Read metadata
+    header=$(head -n 1 "$table_file")
+    IFS='|' read -ra cols <<< "$header"
+
+    col_names=()
+    col_types=()
+    pk_index=-1
+    pk_name=""
+
+    for i in "${!cols[@]}"; do
+        col=$(trim "${cols[$i]}")
+        IFS=':' read -ra parts <<< "$col"
+
+        col_names+=("${parts[0]}")
+        col_types+=("${parts[1]}")
+
+        flag=$(trim "${parts[2]}")
+        if [ "$flag" = "PK" ]; then
+            pk_index=$i
+            pk_name="${parts[0]}"
+        fi
+    done
+
+    if [ "$pk_index" -lt 0 ]; then
+        echo "Invalid table schema."
+        read -p "Press Enter to continue..."
+        return
+    fi
+
+    pk_type="${col_types[$pk_index]}"
+
+    # Ask for PK
+    read -p "Enter $pk_name value to update: " pk_value
+    pk_value=$(trim "$pk_value")
+
+    if ! is_valid_value_by_type "$pk_value" "$pk_type"; then
+        echo "Invalid primary key value."
+        read -p "Press Enter to continue..."
+        return
+    fi
+
+    if ! pk_exists "$table_file" "$pk_index" "$pk_value"; then
+        echo "Record not found."
+        read -p "Press Enter to continue..."
+        return
+    fi
+
+    # Read new values
+    new_values=()
+
+    for i in "${!col_names[@]}"; do
+
+        if [ "$i" -eq "$pk_index" ]; then
+            new_values+=("$pk_value")
+            continue
+        fi
+
+        while true; do
+            read -p "Enter new ${col_names[$i]} (${col_types[$i]}): " val
+            val=$(trim "$val")
+
+            if is_valid_value_by_type "$val" "${col_types[$i]}"; then
+                break
+            else
+                echo "Invalid value."
+            fi
+        done
+
+        new_values+=("$val")
+    done
+
+    new_row=$(IFS='|'; echo "${new_values[*]}")
+
+    # Update using temp file
+    temp_file=$(mktemp)
+
+    head -n 1 "$table_file" > "$temp_file"
+
+    awk -F'|' -v idx=$((pk_index+1)) -v pk="$pk_value" -v new_row="$new_row" '
+        NR > 1 {
+            gsub(/^[ \t]+|[ \t]+$/, "", $idx)
+            if ($idx == pk) {
+                print new_row
+            } else {
+                print $0
+            }
+        }
+    ' "$table_file" >> "$temp_file"
+
+    mv "$temp_file" "$table_file"
+
+    echo "Record updated successfully."
+    read -p "Press Enter to continue..."
+}

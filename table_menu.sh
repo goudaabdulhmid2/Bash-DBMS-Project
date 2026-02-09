@@ -42,7 +42,8 @@ table_menu() {
                 clear
                 ;;
             "Update Table")
-                echo ">> Update Table "
+                update_table
+                clear
                 ;;
             "Back")
                 CURRENT_DB=""
