@@ -226,3 +226,58 @@ insert_into_table() {
     echo "Row inserted successfully ✅"
     read -p "Press Enter to continue..."
 }
+
+
+
+select_from_table(){
+
+    ensure_db_selected || return
+
+    read -p "Enter table name: " table_name
+    table_file="$DB_ROOT/$CURRENT_DB/$table_name.table"
+
+    if [ ! -f "$table_file" ]; then
+        echo "Table does not exist !!!!!!"
+        read -p "Press Enter to continue..."
+        return
+    fi
+
+    # Read header 
+    header=$(head -n 1 "$table_file")
+
+    # column names
+    IFS='|' read -ra cols <<< "$header"
+
+    col_names=()
+
+    for col in "${cols[@]}"; do
+        col=$(echo "$col" | xargs)
+        IFS=':' read -ra parts <<< "$col"
+        col_names+=("${parts[0]}")
+    done
+
+    # Print header     
+    echo
+    for name in "${col_names[@]}"; do
+        printf "%-15s" "$name"
+    done
+    echo
+
+    printf '%.0s-' {1..60}
+    echo
+
+    # Print rows
+    tail -n +2 "$table_file" | while IFS='|' read -ra row; do
+        for cell in "${row[@]}"; do
+            cell=$(echo "$cell" | xargs)
+            printf "%-15s" "$cell"
+        done
+        echo
+    done
+
+    echo
+    read -p "Press Enter to continue..."
+
+
+
+}

@@ -34,7 +34,8 @@ table_menu() {
                 clear
                 ;;
             "Select From Table")
-                echo ">> Select From Table "
+                select_from_table
+                clear
                 ;;
             "Delete From Table")
                 echo ">> Delete From Table "
