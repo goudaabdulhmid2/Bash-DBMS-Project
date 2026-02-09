@@ -27,7 +27,8 @@ table_menu() {
                 clear
                 ;;
             "Drop Table")
-                echo ">> Drop Table "
+                drop_table
+                clear
                 ;;
             "Insert Into Table")
                 insert_into_table

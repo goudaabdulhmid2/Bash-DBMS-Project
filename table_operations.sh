@@ -459,3 +459,28 @@ update_table() {
     echo "Record updated successfully."
     read -p "Press Enter to continue..."
 }
+
+
+drop_table() {
+
+    ensure_db_selected || return
+
+    read -p "Enter table name to drop: " table_name
+    table_name=$(trim "$table_name")
+    table_file="$DB_ROOT/$CURRENT_DB/$table_name.table"
+
+    if [ ! -f "$table_file" ]; then
+        echo "Table does not exist."
+        read -p "Press Enter to continue..."
+        return
+    fi
+
+    if confirm_action "Are you sure you want to delete table '$table_name'"; then
+        rm "$table_file"
+        echo "Table deleted successfully."
+    else
+        echo "Operation cancelled."
+    fi
+
+    read -p "Press Enter to continue..."
+}
