@@ -38,7 +38,8 @@ table_menu() {
                 clear
                 ;;
             "Delete From Table")
-                echo ">> Delete From Table "
+                delete_from_table
+                clear
                 ;;
             "Update Table")
                 echo ">> Update Table "

@@ -1,23 +1,22 @@
 #!/bin/bash
 
+trim() {
+    echo "$1" | xargs
+}
 
 is_valid_name() {
-    # valid identifier: starts with letter/_ then letters/numbers/_
     [[ $1 =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]]
 }
 
 is_valid_number() {
-    # positive integer >= 1
     [[ $1 =~ ^[1-9][0-9]*$ ]]
 }
 
 is_valid_datatype() {
-    # supported datatypes
     [[ "$1" == "int" || "$1" == "string" ]]
 }
 
 confirm_action() {
-    # generic yes/no confirmation
     local message="$1"
     read -p "$message (y/n): " answer
     [[ $answer =~ ^[yY]$ ]]
@@ -29,29 +28,38 @@ is_valid_int() {
 
 is_non_empty_string() {
     local trimmed
-    trimmed=$(echo "$1" | xargs)
+    trimmed=$(trim "$1")
     [ -n "$trimmed" ]
 }
 
-is_pk_unique() {
+is_valid_value_by_type() {
+    local value="$1"
+    local type="$2"
+
+    case "$type" in
+        int)    is_valid_int "$value" ;;
+        string) is_non_empty_string "$value" ;;
+        *)      return 1 ;;
+    esac
+}
+
+pk_exists() {
     local table_file="$1"
     local pk_index="$2"
     local pk_value="$3"
 
     awk -F'|' -v idx=$((pk_index+1)) -v pk="$pk_value" '
-        BEGIN { found = 0 }
+        BEGIN { found = 1 }
 
         NR > 1 {
             gsub(/^[ \t]+|[ \t]+$/, "", $idx)
             if ($idx == pk) {
-                found = 1
+                found = 0
                 exit
             }
         }
 
-        END {
-            if (found) exit 1
-            else exit 0
-        }
+        END { exit found }
     ' "$table_file"
 }
+

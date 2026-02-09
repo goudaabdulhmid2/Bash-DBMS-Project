@@ -5,28 +5,33 @@ create_table(){
     ensure_db_selected || return
 
     # Table name
-    while true; do
+        while true; do
         read -p "Enter table name: " table_name
-        if is_valid_name "$table_name"; then
-            table_file="$DB_ROOT/$CURRENT_DB/$table_name.table"
-            if [ -f "$table_file" ]; then
-                echo "Table already exists !!!!"
-            else
-                break
-            fi
+        table_name=$(trim "$table_name")
+
+        if ! is_valid_name "$table_name"; then
+            echo "Invalid table name!"
+            continue
+        fi
+
+        table_file="$DB_ROOT/$CURRENT_DB/$table_name.table"
+
+        if [ -f "$table_file" ]; then
+            echo "Table already exists!"
         else
-            echo "Invalid table name !!!!"
+            break
         fi
     done
 
 
     #Number of columns
+   
     while true; do
         read -p "Enter number of columns: " col_count
         if is_valid_number "$col_count"; then
             break
         else
-            echo "Invalid number of columns !!!!"
+            echo "Invalid number!"
         fi
     done
 
@@ -34,16 +39,18 @@ create_table(){
     pk_defined=false
     declare -a column_names=()
 
-for ((i=1; i<=col_count; i++)); do
+    for ((i=1; i<=col_count; i++)); do
         echo "---- Column $i ----"
 
   
         while true; do
             read -p "Column name: " col_name
+            col_name=$(trim "$col_name")
+
             if ! is_valid_name "$col_name"; then
-                echo "Invalid column name !!!"
+                echo "Invalid column name!"
             elif [[ " ${column_names[@]} " =~ " $col_name " ]]; then
-                echo "Duplicate column name !!!"
+                echo "Duplicate column name!"
             else
                 break
             fi
@@ -52,11 +59,12 @@ for ((i=1; i<=col_count; i++)); do
        
         while true; do
             read -p "Datatype (int/string): " col_type
-            col_type=$(echo "$col_type" | tr 'A-Z' 'a-z')
+            col_type=$(trim "$col_type" | tr 'A-Z' 'a-z')
+
             if is_valid_datatype "$col_type"; then
                 break
             else
-                echo "Invalid datatype !!!"
+                echo "Invalid datatype!"
             fi
         done
 
@@ -64,17 +72,13 @@ for ((i=1; i<=col_count; i++)); do
         if [ "$pk_defined" = false ]; then
             while true; do
                 read -p "Is Primary Key? (y/n): " is_pk
-                if [[ $is_pk =~ ^[yYnN]$ ]]; then
-                    break
-                else
-                    echo "Invalid choice !!!"
-                fi
+                [[ $is_pk =~ ^[yYnN]$ ]] && break
+                echo "Invalid choice!"
             done
         else
             is_pk="n"
         fi
 
-     
         if [[ $is_pk =~ ^[yY]$ ]]; then
             pk_defined=true
             col_def="$col_name:$col_type:PK"
@@ -84,26 +88,21 @@ for ((i=1; i<=col_count; i++)); do
 
         column_names+=("$col_name")
 
-        if [ -z "$columns" ]; then
-            columns="$col_def"
-        else
-            columns="$columns | $col_def"
-        fi
+        [ -z "$columns" ] && columns="$col_def" || columns="$columns | $col_def"
     done
 
 
     # Ensure PK exists 
     if [ "$pk_defined" = false ]; then
-        echo "Table must have a primary key !!!!"
-        read -p "Press Enter to continue..."
+        echo "Table must have a primary key!"
+        read -p "Press Enter..."
         return
     fi
 
     #Create table file
     echo "$columns" > "$table_file"
-    echo "Table '$table_name' created successfully ✅"
-    read -p "Press Enter to continue..."
-
+    echo "Table created successfully."
+    read -p "Press Enter..."
 
 }
 
@@ -134,6 +133,7 @@ insert_into_table() {
     ensure_db_selected || return
 
     read -p "Enter table name: " table_name
+    table_name=$(trim "$table_name")
     table_file="$DB_ROOT/$CURRENT_DB/$table_name.table"
 
     if [ ! -f "$table_file" ]; then
@@ -151,15 +151,13 @@ insert_into_table() {
     pk_index=-1
 
     for i in "${!cols[@]}"; do
-        col=$(echo "${cols[$i]}" | xargs)
+        col=$(trim "${cols[$i]}")
         IFS=':' read -ra parts <<< "$col"
 
-        name="${parts[0]}"
-        type="${parts[1]}"
-        flag=$(echo "${parts[2]}" | xargs)
+        col_names+=("${parts[0]}")
+        col_types+=("${parts[1]}")
 
-        col_names+=("$name")
-        col_types+=("$type")
+        flag=$(trim "${parts[2]}")
 
         if [ "$flag" = "PK" ]; then
             pk_index=$i
@@ -167,22 +165,24 @@ insert_into_table() {
     done
 
     if [ "$pk_index" -lt 0 ]; then
-        echo "Invalid table schema (no PK) !!!"
+        echo "Invalid table schema !!!"
         read -p "Press Enter to continue..."
         return
     fi
+
+    pk_type="${col_types[$pk_index]}"
 
     #  Step 4: Read PK FIRST 
     read -p "Enter ${col_names[$pk_index]} (PK): " pk_value
-    pk_value=$(echo "$pk_value" | xargs)
+    pk_value=$(trim "$pk_value")
 
-    if ! is_valid_int "$pk_value"; then
-        echo "Primary key must be integer !!!"
+    if ! is_valid_value_by_type "$pk_value" "$pk_type"; then
+        echo "Invalid primary key value !!!"
         read -p "Press Enter to continue..."
         return
     fi
 
-    if ! is_pk_unique "$table_file" "$pk_index" "$pk_value"; then
+    if pk_exists "$table_file" "$pk_index" "$pk_value"; then
         echo "Primary key already exists !!!"
         read -p "Press Enter to continue..."
         return
@@ -199,27 +199,18 @@ insert_into_table() {
 
         while true; do
             read -p "Enter ${col_names[$i]} (${col_types[$i]}): " val
-            val=$(echo "$val" | xargs)
+            val=$(trim "$val")
 
-            if [ "${col_types[$i]}" = "int" ]; then
-                if is_valid_int "$val"; then
-                    break
-                else
-                    echo "Invalid integer !!!"
-                fi
+            if is_valid_value_by_type "$val" "${col_types[$i]}"; then
+                break
             else
-                if is_non_empty_string "$val"; then
-                    break
-                else
-                    echo "Value cannot be empty !!!"
-                fi
+                echo "Invalid value !!!!"
             fi
         done
 
         values+=("$val")
     done
 
-    #  Step 6: Insert row 
     row=$(IFS='|'; echo "${values[*]}")
     echo "$row" >> "$table_file"
 
@@ -280,4 +271,81 @@ select_from_table(){
 
 
 
+}
+
+delete_from_table() {
+
+    ensure_db_selected || return
+
+    read -p "Enter table name: " table_name
+    table_name=$(trim "$table_name")
+    table_file="$DB_ROOT/$CURRENT_DB/$table_name.table"
+
+    if [ ! -f "$table_file" ]; then
+        echo "Table does not exist !!!!"
+        read -p "Press Enter to continue..."
+        return
+    fi
+
+    #  Read metadata 
+    header=$(head -n 1 "$table_file")
+    IFS='|' read -ra cols <<< "$header"
+
+    pk_index=-1
+    pk_name=""
+    col_types=()
+
+    for i in "${!cols[@]}"; do
+        col=$(trim "${cols[$i]}")
+        IFS=':' read -ra parts <<< "$col"
+
+        col_types+=("${parts[1]}")
+        flag=$(trim "${parts[2]}")
+
+        if [ "$flag" = "PK" ]; then
+            pk_index=$i
+            pk_name="${parts[0]}"
+        fi
+    done
+
+    if [ "$pk_index" -lt 0 ]; then
+        echo "Invalid table schema !!!!"
+        read -p "Press Enter to continue..."
+        return
+    fi
+
+    pk_type="${col_types[$pk_index]}"
+
+    #  Read PK 
+    read -p "Enter $pk_name value to delete: " pk_value
+    pk_value=$(trim "$pk_value")
+
+    if ! is_valid_value_by_type "$pk_value" "$pk_type"; then
+        echo "Invalid primary key !!!!"
+        read -p "Press Enter to continue..."
+        return
+    fi
+
+    if ! pk_exists "$table_file" "$pk_index" "$pk_value"; then
+        echo "Record not found !!!!"
+        read -p "Press Enter to continue..."
+        return
+    fi
+
+    #  Delete using temp file 
+    temp_file=$(mktemp)
+
+    head -n 1 "$table_file" > "$temp_file"
+
+    awk -F'|' -v idx=$((pk_index+1)) -v pk="$pk_value" '
+        NR > 1 {
+            gsub(/^[ \t]+|[ \t]+$/, "", $idx)
+            if ($idx != pk) print $0
+        }
+    ' "$table_file" >> "$temp_file"
+
+    mv "$temp_file" "$table_file"
+
+    echo "Record deleted successfully ✅"
+    read -p "Press Enter to continue..."
 }
