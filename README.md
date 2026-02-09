@@ -18,3 +18,4 @@ A Database Management System implemented using Bash scripting.
 - Select from Table
 - Delete from Table
 - Update Table
+- s
